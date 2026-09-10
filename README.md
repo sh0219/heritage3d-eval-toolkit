@@ -2,7 +2,7 @@
 
 本仓库收录论文《基于三维数字化的建水明清建筑斜栱形制演变研究——兼论古建筑数字档案构建》所使用的图像预处理、图像质量评价与三维网格（Mesh）评价脚本。工具集面向 Instant-NGP、3D Gaussian Splatting（3DGS/gsplat）、GaussianWrapping 与 RealityScan 等方法生成的结果，主要用于比较新视角合成质量、网格结构状态与古建筑构件的可辨识程度。
 
-这些脚本服务于建筑形制研究中的方法选择，不构成通用三维重建基准。网格评价结果应与原始影像及同场景、同视角白模共同解释。
+此工具包服务于建筑形制研究中的方法评估与方法选择，不构成通用三维重建基准。网格评价结果应与原始影像及同场景、同视角白模共同解释。
 
 ## 脚本说明
 
@@ -27,37 +27,38 @@
 
 ### 安装依赖
 
-创建独立环境：
+建议使用 Anaconda 或 Miniconda 创建独立运行环境。以下命令以 Python 3.10 和环境名 `heritage-reconstruction` 为例：
 
 ```bash
-python -m venv .venv
+conda create -n heritage-reconstruction python=3.10 -y
+conda activate heritage-reconstruction
 ```
 
-Linux/macOS：
+优先通过 Conda 安装 `rtree`，以避免其空间索引依赖在部分系统中编译失败：
 
 ```bash
-source .venv/bin/activate
+conda install -c conda-forge rtree -y
 ```
 
-Windows PowerShell：
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-安装依赖：
+随后安装其余 Python 依赖：
 
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-若需要使用 NVIDIA GPU，请根据本机 CUDA 与驱动版本，先从 [PyTorch 官方安装页面](https://pytorch.org/get-started/locally/)选择匹配的 `torch` 和 `torchvision` 安装命令，再安装其余依赖。没有可用 CUDA 时，`eval_metrics4.py` 会从 `cuda` 自动回退至 CPU，也可显式传入 `--device cpu`。
-
-`trimesh` 的曲率计算可能依赖 `rtree`。若 `pip` 安装失败，可使用 Conda 安装：
+完成安装后，可检查环境是否可用：
 
 ```bash
-conda install -c conda-forge rtree
+python -c "import torch, open3d, trimesh, lpips; print('Environment ready')"
+```
+
+若使用 NVIDIA GPU，请根据本机 CUDA 与驱动版本，从 [PyTorch 官方安装页面](https://pytorch.org/get-started/locally/)选择适配的 Conda 或 pip 命令安装 `torch` 与 `torchvision`，再执行 `python -m pip install -r requirements.txt`。没有可用 CUDA 时，`eval_metrics4.py` 会自动回退至 CPU，也可显式传入 `--device cpu`。
+
+后续每次运行脚本前，先激活环境：
+
+```bash
+conda activate heritage-reconstruction
 ```
 
 ## 推荐目录结构
@@ -234,7 +235,7 @@ python evaluate_meshes.py \
 
 注意：自动建议仅为参考。若主体与背景相连，最大连通分量的包围盒可能仍包含背景，推荐使用CloudCompare、Blender等软件目视检查，并手动裁剪网格以分离出重建主体。
 
-### 3. 串行完整评价
+### 3. 串行完整评价（推荐）
 
 ```bash
 python evaluate_meshes.py \
@@ -257,7 +258,7 @@ python evaluate_meshes.py \
 - `--elev1/--azim1`、`--elev2/--azim2`：设置两组统一观察视角。
 - `--labels NAME1 NAME2 NAME3`：自定义三种方法的显示名称。
 
-### 4. 并行完整评价
+### 4. 并行完整评价（小内存机器慎用）
 
 ```bash
 python evaluate_meshes_parallel.py \
@@ -269,7 +270,7 @@ python evaluate_meshes_parallel.py \
   --out_dir ./mesh_eval_parallel
 ```
 
-并行版与串行版使用相同指标和输出格式。每个 worker 会独立加载一份网格，内存有限时建议使用 `--workers 1` 或 `--workers 2`。
+注意：并行版与串行版使用相同指标和输出格式。但并行版运行时每个 worker 会独立加载一份网格，内存有限时建议使用 `--workers 1` 或 `--workers 2`。或直接使用串行版程序。
 
 ### 5. 评价内容与输出
 
@@ -296,9 +297,9 @@ mesh_eval/
 └── component_clearance.png
 ```
 
-曲率分析内部会将超过 300,000 面的网格副本降面后计算；白模绘制也使用独立的低面数副本。这些操作不改变写入报告的主评价网格。
+注意：曲率分析内部会将超过 300,000 面的网格副本降面后计算；白模绘制也使用独立的低面数副本。这些操作不改变写入报告的主评价网格。不同网格体之间原始坐标可能存在差异，有可能导致网格体朝向不同，而使白模图片生成视角不统一，可将网格体导入Blender等软件手动布光渲染，生成白模图片。
 
-## 独立计算连通分量间采样近邻距离
+## 独立计算连通分量间采样近邻距离（功能已包含于完整评价程序中，仅供需此项指标详细报告时使用）
 
 ```bash
 python component_clearance_only.py \
@@ -336,9 +337,10 @@ python component_clearance_only.py \
 ## 复现建议
 
 - 保存原始影像、测试/训练划分、相机位姿和模型版本；
-- 记录软件版本、训练参数、裁剪框、降面目标、评价视角和运行设备；
 - 图像评价应使用相同文件名和相同参考坐标；
 - 不要在同一统计表中混合原始图像与均光匀色后的图像；
+- 在评估前尽量将网格体（Mesh）中重建主体外的背景区域剔除干净，以免影响评估结果；
+- 网格体（Mesh）评估计算过程中内存（RAM）占用较大，尽量确保程序运行时有较大内存空间可用；
 - 将 CSV、JSON、文本报告和白模与论文表格共同归档；
 - 大型网格首次运行时可先加入 `--no_curvature --no_render` 检查流程和内存占用。
 
