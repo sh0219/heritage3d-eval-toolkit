@@ -1,0 +1,17 @@
+# Core numerical and image-processing dependencies
+numpy>=1.24,<2.0
+Pillow>=9.5
+scipy>=1.10
+matplotlib>=3.7
+
+# Image-quality evaluation
+# For CUDA builds, install torch and torchvision using the matching command
+# from https://pytorch.org/get-started/locally/ before installing this file.
+torch>=2.0
+torchvision>=0.15
+lpips>=0.1.4
+
+# Mesh loading, processing, topology and curvature evaluation
+open3d>=0.18
+trimesh>=4.0
+rtree>=1.0
